@@ -1,4 +1,4 @@
-package org.instk.demo_1001;
+package org.pitambar.ins;
 
 import android.content.Context;
 
@@ -22,6 +22,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
 
-        assertEquals("org.instk.demo_1001", appContext.getPackageName());
+        assertEquals("org.pitambar.ins", appContext.getPackageName());
     }
 }

@@ -6,14 +6,14 @@
 
 /**********************************************
  * 
- * Author: Yigiter Yuksel
+ * Author: Pitambar Koirala
  * 
- * 01.2010
- * instk.org
+ *
+ * pitambar.org
  * 
  */
 
-package org.instk.demo_1001;
+package org.pitambar.ins;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

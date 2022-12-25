@@ -1,4 +1,4 @@
-package org.instk.demo_1001;
+package org.pitambar.ins;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

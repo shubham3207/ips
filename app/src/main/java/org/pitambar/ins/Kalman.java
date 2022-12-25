@@ -1,13 +1,13 @@
 /**********************************************
  * 
- * Author: Yigiter Yuksel
+ * Author: Pitambar Koirala
  * 
- * 01.2010
- * instk.org
+ *
+ * pitambar.org
  * 
  */
 
-package org.instk.demo_1001;
+package org.pitambar.ins;
 
 import org.ejml.data.DenseMatrix64F;
 import org.ejml.ops.CommonOps;
