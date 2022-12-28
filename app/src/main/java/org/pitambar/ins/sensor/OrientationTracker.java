@@ -15,9 +15,11 @@ import android.util.Log;
 public class OrientationTracker implements SensorEventListener {
 
     // Declare variables to store sensor data
-    float[] accelerometerData=new float[]{0f,0f,0f};
-    float[] gyroscopeData=new float[]{0f,0f,0f};
-    float[] magnetometerData=new float[]{0f,0f,0f};
+    float[] accelerometerData = new float[]{0f, 0f, 0f};
+    float[] gyroscopeData = new float[]{0f, 0f, 0f};
+    float[] magnetometerData = new float[]{0f, 0f, 0f};
+
+    float alpha = 0.8f;
 
     float[] smoothedData;
     float[] orientation;
@@ -30,7 +32,7 @@ public class OrientationTracker implements SensorEventListener {
     Sensor magnetometer;
     float dt = 0.525f;
 
-public SensorDataListener sensorDataListener;
+    public SensorDataListener sensorDataListener;
 
     public OrientationTracker(Context context) {
 
@@ -48,26 +50,35 @@ public SensorDataListener sensorDataListener;
         // Get the sensor data from the event
         switch (event.sensor.getType()) {
             case Sensor.TYPE_ACCELEROMETER:
-                accelerometerData = event.values;
-                Log.v("test","test accelerometerData "+accelerometerData[0]);
+//                accelerometerData = event.values;
+                accelerometerData[0] = alpha*accelerometerData[0]+(1-alpha)*event.values[0];
+                accelerometerData[1] = alpha*accelerometerData[0]+(1-alpha)*event.values[0];
+                accelerometerData[2] = alpha*accelerometerData[0]+(1-alpha)*event.values[0];
+                Log.v("test", "test accelerometerData " + accelerometerData[0]);
                 break;
             case Sensor.TYPE_GYROSCOPE:
                 gyroscopeData = event.values;
-                Log.v("test","test gyroscopeData "+gyroscopeData[0]);
+                Log.v("test", "test gyroscopeData " + gyroscopeData[0]);
 
                 break;
             case Sensor.TYPE_MAGNETIC_FIELD:
                 magnetometerData = event.values;
-                Log.v("test","test magnetometerData "+magnetometerData[0]);
-
+                Log.v("test", "test magnetometerData " + magnetometerData[0]);
                 break;
-
-
         }
 
 
         // Use the Kalman filter or complementary filter to smooth the sensor data
-        smoothedData = smoothSensorData(accelerometerData, gyroscopeData, magnetometerData);
+//        smoothedData = smoothSensorData(accelerometerData, gyroscopeData, magnetometerData);
+
+        float[] measurementVector = new float[6];
+        measurementVector[0] = accelerometerData[0];
+        measurementVector[1] = accelerometerData[1];
+        measurementVector[2] = accelerometerData[2];
+        measurementVector[3] = gyroscopeData[0];
+        measurementVector[4] = gyroscopeData[1];
+        measurementVector[5] = gyroscopeData[2];
+        smoothedData = measurementVector;
 
         // Calculate the device's orientation and velocity using the smoothed data
         orientation = calculateOrientation(smoothedData);
@@ -76,8 +87,9 @@ public SensorDataListener sensorDataListener;
         // Integrate the velocity data to calculate the device's position
         position = integrateVelocity(velocity);
 
-        Log.v("test","position "+position[0]);
+        Log.v("test", "position " + position[0]+","+position[1]+","+position[2]);
         sensorDataListener.onPositionObtained(position);
+        sensorDataListener.onOrientaionObtained(orientation);
     }
 
     @Override
@@ -99,30 +111,30 @@ public SensorDataListener sensorDataListener;
 
 
     public float[] smoothSensorData(float[] accelerometerData, float[] gyroscopeData, float[] magnetometerData) {
-        Log.v("test","test gyroscopeData obtained "+gyroscopeData[0]);
+        Log.v("test", "test gyroscopeData obtained " + gyroscopeData[0]);
 
 
         // Create the Kalman filter
         KalmanFilter kalmanFilter = new KalmanFilter();
 
         // Set the initial state vector and covariance matrix
-        float[] initialState = new float[6];
-        float[][] initialCovariance = new float[6][6];
+        float[] initialState = {1,0,0,0,0,0};
+        float[][] initialCovariance = {{1, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0}, {0, 0, 1, 0, 0, 0}, {0, 0, 0, 1, 0, 0}, {0, 0, 0, 0, 1, 0}, {0, 0, 0, 0, 0, 1}};
         kalmanFilter.setState(initialState, initialCovariance);
 
         // Set the measurement matrix and noise covariance matrix
-        float[][] measurementMatrix = new float[6][6];
-        float[][] measurementNoiseCovariance = new float[6][6];
+        float[][] measurementMatrix = {{1, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0}, {0, 0, 1, 0, 0, 0}, {0, 0, 0, 1, 0, 0}, {0, 0, 0, 0, 1, 0}, {0, 0, 0, 0, 0, 1}};
+        float[][] measurementNoiseCovariance = {{1, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0}, {0, 0, 1, 0, 0, 0}, {0, 0, 0, 1, 0, 0}, {0, 0, 0, 0, 1, 0}, {0, 0, 0, 0, 0, 1}};
         kalmanFilter.setMeasurement(measurementMatrix, measurementNoiseCovariance);
 
         // Set the process model matrix and noise covariance matrix
-        float[][] processModelMatrix = new float[6][6];
-        float[][] processNoiseCovariance = new float[6][6];
+        float[][] processModelMatrix = {{1, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0}, {0, 0, 1, 0, 0, 0}, {0, 0, 0, 1, 0, 0}, {0, 0, 0, 0, 1, 0}, {0, 0, 0, 0, 0, 1}};
+        float[][] processNoiseCovariance = {{1, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0}, {0, 0, 1, 0, 0, 0}, {0, 0, 0, 1, 0, 0}, {0, 0, 0, 0, 1, 0}, {0, 0, 0, 0, 0, 1}};
         kalmanFilter.setProcessModel(processModelMatrix, processNoiseCovariance);
 
         // Set the control input vector and control input matrix
-        float[] controlInputVector = new float[6];
-        float[][] controlInputMatrix = new float[6][6];
+        float[] controlInputVector = {1,1,1,1,1,1};
+        float[][] controlInputMatrix ={{1, 0, 0, 0, 0, 0}, {0, 1, 0, 0, 0, 0}, {0, 0, 1, 0, 0, 0}, {0, 0, 0, 1, 0, 0}, {0, 0, 0, 0, 1, 0}, {0, 0, 0, 0, 0, 1}};
         kalmanFilter.setControlInput(controlInputVector, controlInputMatrix);
 
         // Set the measurement vector
@@ -143,18 +155,34 @@ public SensorDataListener sensorDataListener;
     }
 
     private float[] calculateOrientation(float[] smoothedData) {
-        // Declare variables to store the orientation
-        float[] orientation = new float[3];
+//        // Declare variables to store the orientation
+//        float[] orientation = new float[3];
+//
+//        // Use the accelerometer data to calculate the pitch and roll
+//        orientation[1] = (float) Math.atan2(-smoothedData[0], smoothedData[2]);
+//        orientation[2] = (float) Math.atan2(-smoothedData[1], smoothedData[2]);
+//
+//        // Use the gyroscope data to calculate the yaw
+//        orientation[0] = smoothedData[3] * dt + orientation[0];
+//
+//        // Return the orientation
 
-        // Use the accelerometer data to calculate the pitch and roll
-        orientation[1] = (float) Math.atan2(-smoothedData[0], smoothedData[2]);
-        orientation[2] = (float) Math.atan2(-smoothedData[1], smoothedData[2]);
+        // Create arrays for the rotation matrix, inclination matrix, and orientation values
+        float[] rotationMatrix = new float[9];
+        float[] inclinationMatrix = new float[9];
+        float[] orientationValues = new float[3];
 
-        // Use the gyroscope data to calculate the yaw
-        orientation[0] = smoothedData[3] * dt + orientation[0];
+// Get the rotation and inclination matrices from the SensorManager
+        sensorManager.getRotationMatrix(rotationMatrix, inclinationMatrix, accelerometerData, magnetometerData);
 
-        // Return the orientation
-        return orientation;
+// Calculate the device's orientation using the rotation and inclination matrices
+        sensorManager.getOrientation(rotationMatrix, orientationValues);
+
+// The orientationValues array now contains the device's pitch, roll, and azimuth (yaw)
+        float pitch = orientationValues[1];
+        float roll = orientationValues[2];
+        float azimuth = orientationValues[0];
+        return orientationValues;
     }
 
     public float[] calculateVelocity(float[] smoothedData) {
@@ -183,11 +211,16 @@ public SensorDataListener sensorDataListener;
         return position;
     }
 
-    public float[] getPostion(){
+    public float[] getPostion() {
         return position;
+    }
+
+    public float[] getOrientation() {
+        return orientation;
     }
 }
 
-interface SensorDataListener{
+interface SensorDataListener {
     public void onPositionObtained(float[] position);
+    public void onOrientaionObtained(float[] orientation);
 }

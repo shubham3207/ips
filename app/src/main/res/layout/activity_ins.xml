@@ -8,4 +8,20 @@
         android:id="@+id/posTextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
+
+    <TextView
+        android:id="@+id/orientationTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/childLayout"
+        android:visibility="gone"
+        android:layout_centerHorizontal="true"
+         />
+    <SurfaceView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
 </LinearLayout>

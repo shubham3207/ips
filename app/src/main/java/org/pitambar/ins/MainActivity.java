@@ -11,6 +11,9 @@ package org.pitambar.ins;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -24,6 +27,7 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 public class MainActivity extends Activity implements OnClickListener, SensorEventListener {
@@ -74,6 +78,11 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
     float[] vr_b = new float[3];
     float[] mx_a = new float[9];
 
+    DevicePositionView devicePositionView;
+    float[] devicePosition = new float[3];
+    float[] deviceOrientation = new float[3];
+    private Canvas mCanvas;
+
     public MainActivity() {
         mCube = new MyCube(INIPos, INICbn);
         mINS = new INS(INIPos, INIVel, INICbn);
@@ -89,11 +98,19 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         //Get a reference to sensor manager
         mSMan = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 //
-//        //Set the OpenGl View
+        //Set the OpenGl View
         mGLSView = new GLSurfaceView(this);
         mGLSView.setRenderer(mCube);
         setContentView(mGLSView);
-//
+        mGLSView.setVisibility(View.INVISIBLE);
+        RelativeLayout mDevicePositionView = new RelativeLayout(this);
+        mDevicePositionView.setGravity(Gravity.CENTER);
+        mDevicePositionView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        mDevicePositionView.setId(90);
+
+        devicePositionView = new DevicePositionView(this);
+
+        mDevicePositionView.addView(devicePositionView);
 //        //Add button and text elements to the view
         LinearLayout ll = new LinearLayout(this);
         ll.setOrientation(LinearLayout.VERTICAL);
@@ -146,6 +163,7 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         ll.addView(llb1);
         ll.addView(llb2);
         this.addContentView(etv, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
+        this.addContentView(mDevicePositionView, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
         this.addContentView(ll, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
 
         mbut0.setOnClickListener(this);
@@ -200,177 +218,151 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
     public void onSensorChanged(SensorEvent event) {
         int etype = event.sensor.getType();
         etime = event.timestamp;
-    	float dt=0;
+        float dt = 0;
+        //Recod the value and time
+        switch (etype) {
+            case Sensor.TYPE_ACCELEROMETER:
+                dAcc[0] = event.values[0] - cBAcc[0];
+                dAcc[1] = event.values[1] - cBAcc[1];
+                dAcc[2] = event.values[2] - cBAcc[2];
+                if (ptAcc != 0) dt = (etime - ptAcc) / N2S;
+                ptAcc = etime;
+                break;
+            case Sensor.TYPE_GYROSCOPE:
+                dGyro[0] = event.values[0] - cBGyro[0];
+                dGyro[1] = event.values[1] - cBGyro[1];
+                dGyro[2] = event.values[2] - cBGyro[2];
+                if (ptGyro != 0) dt = (etime - ptGyro) / N2S;
+                ptGyro = etime;
+                break;
+            case Sensor.TYPE_MAGNETIC_FIELD:
+                dMag[0] = event.values[0];
+                dMag[1] = event.values[1];
+                dMag[2] = event.values[2];
+                if (ptMag != 0) dt = (etime - ptMag) / N2S;
+                ptMag = etime;
 
+                break;
+        }
 
-    	//Recod the value and time
-    	switch (etype) {
-    	case Sensor.TYPE_ACCELEROMETER:
-    		dAcc[0]=event.values[0]-cBAcc[0];
-    		dAcc[1]=event.values[1]-cBAcc[1];
-    		dAcc[2]=event.values[2]-cBAcc[2];
-    		if (ptAcc!=0) dt=(etime-ptAcc)/N2S;
-    		ptAcc=etime;
-    		break;
-    	case Sensor.TYPE_GYROSCOPE:
-    		dGyro[0]=event.values[0]-cBGyro[0];
-    		dGyro[1]=event.values[1]-cBGyro[1];
-    		dGyro[2]=event.values[2]-cBGyro[2];
-    		if (ptGyro!=0) dt=(etime-ptGyro)/N2S;
-    		ptGyro=etime;
-    		break;
-    	case Sensor.TYPE_MAGNETIC_FIELD:
-    		dMag[0]=event.values[0];dMag[1]=event.values[1];dMag[2]=event.values[2];
-    		if (ptMag!=0) dt=(etime-ptMag)/N2S;
-    		ptMag=etime;
+        if (mode == 0) { //3dof based on Acc+Compass
+            //We have to be sure that neither Acc nor Compass is zero.
+            if ((dAcc[0] * dAcc[0] + dAcc[1] * dAcc[1] + dAcc[2] * dAcc[2]) < 80)
+                return;
+            else if ((dMag[0] * dMag[0] + dMag[1] * dMag[1] + dMag[2] * dMag[2]) < 400) //30ut*30ut
+                return;
 
-    		break;
-    	}
+            //I am going to use android's built function for body vector to dcm transformation (see the development notes for the criticism of this method)
+            SensorManager.getRotationMatrix(mx_a, null, dAcc, dMag);
 
-    	if (mode==0) { //3dof based on Acc+Compass
-    		//We have to be sure that neither Acc nor Compass is zero.
-    		if ((dAcc[0]*dAcc[0]+dAcc[1]*dAcc[1]+dAcc[2]*dAcc[2])<80)
-    			return;
-    		else if ((dMag[0]*dMag[0]+dMag[1]*dMag[1]+dMag[2]*dMag[2])<400) //30ut*30ut
-    			return;
+            //Set the new orientation in INS and Cube classes
+            mCube.set_dcm(mx_a);
+            mINS.set_dcm(mx_a);
+        } else if (mode == 1) { //3Dof Gyro (mINS must have an initial orientation)
+            if (etype == Sensor.TYPE_GYROSCOPE && dt > 0) {
+                //Update attitude
+                mINS.update_attI(dGyro, dt);
 
-    		//I am going to use android's built function for body vector to dcm transformation (see the development notes for the criticism of this method)
-    		SensorManager.getRotationMatrix(mx_a, null, dAcc, dMag);
+                //Set the camera orientation for cube
+                mCube.set_dcm(mINS.get_dcm());
+            }
 
-    		//Set the new orientation in INS and Cube classes
-    		mCube.set_dcm(mx_a);
-    		mINS.set_dcm(mx_a);
-    	}
-    	else if (mode==1) { //3Dof Gyro (mINS must have an initial orientation)
-    		if (etype==Sensor.TYPE_GYROSCOPE && dt>0) {
-    			//Update attitude
-    			mINS.update_attI(dGyro, dt);
+        } else if (mode == 2) { //Bias removal under LEVEL and STATIONARY conditions
+            if (etype == Sensor.TYPE_ACCELEROMETER)
+                mINS.accum.addacc(dAcc);
 
-    			//Set the camera orientation for cube
-    			mCube.set_dcm(mINS.get_dcm());
-    		}
+            if (etype == Sensor.TYPE_GYROSCOPE)
+                mINS.accum.addgyro(dGyro);
 
-    	}
-    	else if (mode==2) { //Bias removal under LEVEL and STATIONARY conditions
-    		if (etype==Sensor.TYPE_ACCELEROMETER)
-    			mINS.accum.addacc(dAcc);
+            if (etime > tBR) {
+                int i;
+                //Set the bias values
+                mINS.get_gravity(vr_a);
+                mINS.accum.avacc(cBAcc);
+                for (i = 0; i < 3; i++)
+                    cBAcc[i] += vr_a[i];    //Gravity is in ned. That is why we add them.
 
-    		if (etype==Sensor.TYPE_GYROSCOPE)
-    			mINS.accum.addgyro(dGyro);
+                mINS.accum.avgyro(cBGyro);
 
-    		if (etime>tBR) {
-    			int i;
-    			//Set the bias values
-    			mINS.get_gravity(vr_a);
-    			mINS.accum.avacc(cBAcc);
-    			for (i=0;i<3;i++)
-    				cBAcc[i]+=vr_a[i];	//Gravity is in ned. That is why we add them.
+                //Reset the accumulators and time
+                mINS.accum.clear();
+                tBR = 0;
 
-    			mINS.accum.avgyro(cBGyro);
+                //Set the mode to 0 automatically after this routine
+                flow_control(0);
+                etv.setText("Abias :" + cBAcc[0] + "\n" + cBAcc[1] + "\n" + cBAcc[2] + "\n" +
+                        "Gbias :" + cBGyro[0] + "\n" + cBGyro[1] + "\n" + cBGyro[2]);
+            }
 
-    			//Reset the accumulators and time
-    			mINS.accum.clear();
-    			tBR=0;
+        } else if (mode == 3) {    //6Dof Calculations
+            if (etype == Sensor.TYPE_ACCELEROMETER) { //Update velocity and Pos
+                //Update pos and vel
+                mINS.update_velI(dAcc, dt);
+                mINS.update_posII(dt);
 
-    			//Set the mode to 0 automatically after this routine
-    			flow_control(0);
-    			etv.setText("Abias :" + cBAcc[0] + "\n" + cBAcc[1] + "\n"+ cBAcc[2] + "\n" +
-    					    "Gbias :" + cBGyro[0] + "\n" + cBGyro[1] + "\n"+ cBGyro[2]);
-    		}
-    	}
-    	else if (mode==3) {	//6Dof Calculations
-    		if (etype==Sensor.TYPE_ACCELEROMETER) { //Update velocity and Pos
-    			//Update pos and vel
-    			mINS.update_velI(dAcc, dt);
-        		mINS.update_posII(dt);
+                //Update acc accum
+                mINS.accum.addacc(dAcc);
+            }
 
-        		//Update acc accum
-        		mINS.accum.addacc(dAcc);
-    		}
+            if (etype == Sensor.TYPE_GYROSCOPE) { //Update velocity and Pos
+                //Update pos and vel
+                mINS.update_attI(dGyro, dt);
+                mINS.update_velII(dGyro, dt);
+                mINS.update_posI(dGyro, dt);
 
-    		if (etype==Sensor.TYPE_GYROSCOPE) { //Update velocity and Pos
-    			//Update pos and vel
-    			mINS.update_attI(dGyro, dt);
-    			mINS.update_velII(dGyro, dt);
-        		mINS.update_posI(dGyro, dt);
+                //Update acc accum
+                mINS.accum.addgyro(dGyro);
+            }
 
-        		//Update acc accum
-        		mINS.accum.addgyro(dGyro);
-    		}
+            //Set the camera pos & orientation for cube
+            mCube.set_dcm(mINS.get_dcm());
+            mCube.set_pos(mINS.get_pos());
 
-    		//Set the camera pos & orientation for cube
-    		mCube.set_dcm(mINS.get_dcm());
-    		mCube.set_pos(mINS.get_pos());
+            //State Updates and Covariance propagation
+            if (etime > tProp || ZFlag || CFlag) {
+                //First update (propagate the covariance to the current time)
+                dt = (etime - ptProp) / N2S;
+                ptProp = etime;
 
-    		//State Updates and Covariance propagation
-    		if (etime>tProp || ZFlag || CFlag) {
-    			//First update (propagate the covariance to the current time)
-    			dt=(etime-ptProp)/N2S;
-    			ptProp=etime;
+                //Propagate the covariance
+                mKalman.Propagate(mINS, dt);
 
-    			//Propagate the covariance
-    			mKalman.Propagate(mINS, dt);
+                //Clear sensor data accumulators
+                mINS.accum.clear();
 
-    			//Clear sensor data accumulators
-    			mINS.accum.clear();
+                //Next Covaraince update time
+                tProp = etime + PERPROP;
 
-    			//Next Covaraince update time
-    			tProp=etime+PERPROP;
+                //Debug screen
+                etv.setText("Pos :" + mINS.Pos_b.data[0] + "\n" + mINS.Pos_b.data[1] + "\n" + mINS.Pos_b.data[2] + "\n" +
+                        "Vel :" + mINS.Vel_b.data[0] + "\n" + mINS.Vel_b.data[1] + "\n" + mINS.Vel_b.data[2]);
 
-    			//Debug screen
-        		etv.setText("Pos :" + mINS.Pos_b.data[0] + "\n" + mINS.Pos_b.data[1] + "\n"+ mINS.Pos_b.data[2] + "\n" +
-    				    "Vel :" + mINS.Vel_b.data[0] + "\n" + mINS.Vel_b.data[1] + "\n"+ mINS.Vel_b.data[2]);
-    			//etv.setText("Abias :" + cBAcc[0] + "\n" + cBAcc[1] + "\n"+ cBAcc[2] + "\n" +
-				//	    "Gbias :" + cBGyro[0] + "\n" + cBGyro[1] + "\n"+ cBGyro[2]);
+                devicePosition[0] = (float) mINS.Pos_b.data[0];
+                devicePosition[1] = (float) mINS.Pos_b.data[1];
+                devicePosition[2] = (float) mINS.Pos_b.data[2];
 
-        		//flow_control(4);
+                devicePositionView.setPosition(devicePosition);
 
-        		//Check if there is an update request
-        		if (ZFlag) { //Process Zupt request
-        			mKalman.applyZupt(mINS, cBAcc, cBGyro);
-        			ZFlag=false;
-        		}
-        		if (CFlag) { //Process Cupt Request
-        			mKalman.applyCupt(mINS, cBAcc, cBGyro, INIPos);
-        			CFlag=false;
-        		}
+                //TODO: Draw Position updates as line in the screen flow
 
-    		}
+//                FileOperations.writeToFile("position_data", mINS.Pos_b.data[0] + "," + mINS.Pos_b.data[1] + "," + mINS.Pos_b.data[2] + "\n");
+//                FileOperations.writeToFile("velocity_data", mINS.Vel_b.data[0] + "," + mINS.Vel_b.data[1] + "," + mINS.Vel_b.data[2] + "\n");
 
+                flow_control(4);
 
-    	}
+                //Check if there is an update request
+                if (ZFlag) { //Process Zupt request
+                    mKalman.applyZupt(mINS, cBAcc, cBGyro);
+                    ZFlag = false;
+                }
+                if (CFlag) { //Process Cupt Request
+                    mKalman.applyCupt(mINS, cBAcc, cBGyro, INIPos);
+                    CFlag = false;
+                }
 
-//        final float alpha = 0.97f;
+            }
 
-//        synchronized (this) {
-//            if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-//                dAcc[0] = alpha * dAcc[0] + (1 - alpha) * event.values[0];
-//                dAcc[1] = alpha * dAcc[1] + (1 - alpha) * event.values[1];
-//                dAcc[2] = alpha * dAcc[2] + (1 - alpha) * event.values[2];
-//            }
-//
-//            if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-//                dMag[0] = alpha * dMag[0] + (1 - alpha)*event.values[0];
-//                dMag[1] = alpha * dMag[1] + (1 - alpha)*event.values[1];
-//                dMag[2] = alpha * dMag[2] + (1 - alpha)*event.values[2];
-//            }
-//
-//            float R[] = new float[9];
-//            float I[] = new float[9];
-//
-//            boolean success = SensorManager.getRotationMatrix(R,I, dAcc, dMag);
-//
-//            if (success) {
-//                float orientation[] = new float[3];
-//                SensorManager.getOrientation(R, orientation);
-//
-//                Log.d("Azimuth", ""+orientation[0]+", "+ orientation[1]+", "+orientation[2]);
-//                float azimuth = orientation[0]; //in radians
-////                azimuth = azimuth * 360 / (2 * (float) Math.PI); // -180 to 180
-//
-//                Log.d("AZIMUTH", "onSensorChanged: "+Math.toDegrees(azimuth));
-//            }
-//        }
+        }
     }
 
 
@@ -459,4 +451,42 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         }
     }
 
+    private class DevicePositionView extends View {
+        private float[] iDeviceOrientation = {0f, 0f, 0f};
+        private float[] iDevicePosition = {0f, 0f, 0f};
+        private Paint paint;
+        Context mContext;
+        private Canvas canvas;
+
+        private float[] mPosition;
+        public void setPosition(float[] position) {
+            mPosition = position;
+            invalidate();
+        }
+
+        public DevicePositionView(Context context) {
+            super(context);
+            mContext = context;
+            paint = new Paint();
+            paint.setColor(getResources().getColor(R.color.colorPrimary));
+            paint.setStyle(Paint.Style.FILL);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            // Set up the paint for the circle
+            Paint paint = new Paint();
+            paint.setColor(Color.RED);
+            paint.setStyle(Paint.Style.FILL);
+            canvas.save();
+            // Draw the circle at the current position
+            if (mPosition != null) {
+                canvas.drawCircle(Math.abs(mPosition[0]), Math.abs(mPosition[1]), 10f, paint);
+
+            }
+            canvas.restore();
+        }
+    }
 }
+

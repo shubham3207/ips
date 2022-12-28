@@ -36,12 +36,12 @@ public class KalmanFilter {
         this.covariance = covariance;
     }
 
-// Method to set the measurement matrix
+    // Method to set the measurement matrix
 // Method to set the measurement matrix and noise covariance matrix
-public void setMeasurement(float[][] measurementMatrix, float[][] measurementNoiseCovariance) {
-    this.measurementMatrix = measurementMatrix;
-    this.measurementNoiseCovariance = measurementNoiseCovariance;
-}
+    public void setMeasurement(float[][] measurementMatrix, float[][] measurementNoiseCovariance) {
+        this.measurementMatrix = measurementMatrix;
+        this.measurementNoiseCovariance = measurementNoiseCovariance;
+    }
 
     // Method to set the process model matrix and noise covariance matrix
     public void setProcessModel(float[][] processModelMatrix, float[][] processNoiseCovariance) {
@@ -57,11 +57,11 @@ public void setMeasurement(float[][] measurementMatrix, float[][] measurementNoi
 
     // Method to update the Kalman filter with a new measurement
     public void update(float[] measurementVector) {
-        Log.v("test","test measurementVector obtained "+measurementVector[0]);
+        Log.v("test", "test measurementVector obtained " + measurementVector[0]);
 
         // Predict the state and covariance
         state = MatrixMath.add(MatrixMath.multiply(processModelMatrix, state), controlInputVector);
-        Log.v("test","test state111 obtained "+controlInputVector[0] );
+        Log.v("test", "test state111 obtained " + controlInputVector[0]);
 
         covariance = MatrixMath.add(MatrixMath.multiply(MatrixMath.multiply(processModelMatrix, covariance), MatrixMath.transpose(processModelMatrix)), processNoiseCovariance);
 
@@ -71,7 +71,7 @@ public void setMeasurement(float[][] measurementMatrix, float[][] measurementNoi
         // Update the state and covariance
         state = MatrixMath.add(state, MatrixMath.multiply(kalmanGain, MatrixMath.subtract(measurementVector, MatrixMath.multiply(measurementMatrix, state))));
         covariance = MatrixMath.subtract(covariance, MatrixMath.multiply(kalmanGain, MatrixMath.multiply(measurementMatrix, covariance)));
-        Log.v("test","test state obtained "+state[0] + " covariance "+covariance[0]);
+        Log.v("test", "test state obtained " + state[0] + " covariance " + covariance[0]);
 
     }
 
@@ -79,6 +79,7 @@ public void setMeasurement(float[][] measurementMatrix, float[][] measurementNoi
     public float[] getState() {
         return state;
     }
+
     // Method to subtract two matrices
     public static float[][] subtract(float[][] matrix1, float[][] matrix2) {
         // Check that the matrices have the same size
@@ -101,4 +102,4 @@ public void setMeasurement(float[][] measurementMatrix, float[][] measurementNoi
     }
 
 
-        }
+}
