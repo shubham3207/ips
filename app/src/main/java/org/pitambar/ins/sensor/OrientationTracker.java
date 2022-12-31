@@ -54,16 +54,16 @@ public class OrientationTracker implements SensorEventListener {
                 accelerometerData[0] = alpha*accelerometerData[0]+(1-alpha)*event.values[0];
                 accelerometerData[1] = alpha*accelerometerData[0]+(1-alpha)*event.values[0];
                 accelerometerData[2] = alpha*accelerometerData[0]+(1-alpha)*event.values[0];
-                Log.v("test", "test accelerometerData " + accelerometerData[0]);
+//                Log.v("test", "test accelerometerData " + accelerometerData[0]);
                 break;
             case Sensor.TYPE_GYROSCOPE:
                 gyroscopeData = event.values;
-                Log.v("test", "test gyroscopeData " + gyroscopeData[0]);
+//                Log.v("test", "test gyroscopeData " + gyroscopeData[0]);
 
                 break;
             case Sensor.TYPE_MAGNETIC_FIELD:
                 magnetometerData = event.values;
-                Log.v("test", "test magnetometerData " + magnetometerData[0]);
+//                Log.v("test", "test magnetometerData " + magnetometerData[0]);
                 break;
         }
 
@@ -87,7 +87,7 @@ public class OrientationTracker implements SensorEventListener {
         // Integrate the velocity data to calculate the device's position
         position = integrateVelocity(velocity);
 
-        Log.v("test", "position " + position[0]+","+position[1]+","+position[2]);
+//        Log.v("test", "position " + position[0]+","+position[1]+","+position[2]);
         sensorDataListener.onPositionObtained(position);
         sensorDataListener.onOrientaionObtained(orientation);
     }
@@ -111,7 +111,7 @@ public class OrientationTracker implements SensorEventListener {
 
 
     public float[] smoothSensorData(float[] accelerometerData, float[] gyroscopeData, float[] magnetometerData) {
-        Log.v("test", "test gyroscopeData obtained " + gyroscopeData[0]);
+//        Log.v("test", "test gyroscopeData obtained " + gyroscopeData[0]);
 
 
         // Create the Kalman filter

@@ -9,6 +9,8 @@
 
 package org.pitambar.ins;
 
+import static java.security.AccessController.getContext;
+
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -20,8 +22,10 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
@@ -30,12 +34,15 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MainActivity extends Activity implements OnClickListener, SensorEventListener {
 
     private final float N2S = 1000000000f;
 
     //Initial Camera Pos/Att
-    private float[] INIPos = {0, 0, 5};
+    private float[] INIPos = {500, 500, 0};
     private float[] INIVel = {0, 0, 0};
     private float[] INICbn = {1, 0, 0, 0, 1, 0, 0, 0, 1};
 
@@ -54,6 +61,7 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
     //2 = 6Dof
     //3 = Bias Removal
     int mode = 0;
+    int count =0;
     boolean ZFlag = false, CFlag = false;
 
     //Most recent sensor data and its timestamp
@@ -79,15 +87,20 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
     float[] mx_a = new float[9];
 
     DevicePositionView devicePositionView;
-    float[] devicePosition = new float[3];
+    MySurfaceView mCustomSurfaceView;
+
     float[] deviceOrientation = new float[3];
     private Canvas mCanvas;
+    private ArrayList<float[]> positions = new ArrayList<>();
 
     public MainActivity() {
         mCube = new MyCube(INIPos, INICbn);
-        mINS = new INS(INIPos, INIVel, INICbn);
+//        mINS = new INS(INIPos, INIVel, INICbn);
         mKalman = new Kalman();
+
     }
+
+
 
 
     @Override
@@ -97,6 +110,17 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
 
         //Get a reference to sensor manager
         mSMan = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        this.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        int height = displayMetrics.heightPixels;
+        int width = displayMetrics.widthPixels;
+
+        INIPos[0] = (float) width/2;
+        INIPos[1] = (float) height * 0.75f;
+        INIPos[2] = 0f;
+
+        mINS = new INS(INIPos, INIVel, INICbn);
 //
         //Set the OpenGl View
         mGLSView = new GLSurfaceView(this);
@@ -111,6 +135,18 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         devicePositionView = new DevicePositionView(this);
 
         mDevicePositionView.addView(devicePositionView);
+
+        mDevicePositionView.setVisibility(View.GONE);
+
+//        RelativeLayout mSurface = new RelativeLayout(this);
+//        mSurface.setGravity(Gravity.CENTER);
+//        mSurface.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+//        mSurface.setId(92);
+//
+//        mCustomSurfaceView = new MySurfaceView(this);
+//        mSurface.addView(mCustomSurfaceView);
+
+
 //        //Add button and text elements to the view
         LinearLayout ll = new LinearLayout(this);
         ll.setOrientation(LinearLayout.VERTICAL);
@@ -164,6 +200,7 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         ll.addView(llb2);
         this.addContentView(etv, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
         this.addContentView(mDevicePositionView, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
+//        this.addContentView(mSurface, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
         this.addContentView(ll, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
 
         mbut0.setOnClickListener(this);
@@ -299,7 +336,6 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
                 //Update pos and vel
                 mINS.update_velI(dAcc, dt);
                 mINS.update_posII(dt);
-
                 //Update acc accum
                 mINS.accum.addacc(dAcc);
             }
@@ -337,16 +373,25 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
                 etv.setText("Pos :" + mINS.Pos_b.data[0] + "\n" + mINS.Pos_b.data[1] + "\n" + mINS.Pos_b.data[2] + "\n" +
                         "Vel :" + mINS.Vel_b.data[0] + "\n" + mINS.Vel_b.data[1] + "\n" + mINS.Vel_b.data[2]);
 
+                float[] devicePosition = new float[3];
+
                 devicePosition[0] = (float) mINS.Pos_b.data[0];
                 devicePosition[1] = (float) mINS.Pos_b.data[1];
                 devicePosition[2] = (float) mINS.Pos_b.data[2];
 
-                devicePositionView.setPosition(devicePosition);
+//                devicePositionView.setPosition(devicePosition);
+                positions.add(devicePosition);
+                devicePositionView.setPositionArray(positions);
+
+                if(devicePositionView.mCanvas!=null){
+                    devicePositionView.draw(devicePositionView.mCanvas);
+                }
+
 
                 //TODO: Draw Position updates as line in the screen flow
 
-//                FileOperations.writeToFile("position_data", mINS.Pos_b.data[0] + "," + mINS.Pos_b.data[1] + "," + mINS.Pos_b.data[2] + "\n");
-//                FileOperations.writeToFile("velocity_data", mINS.Vel_b.data[0] + "," + mINS.Vel_b.data[1] + "," + mINS.Vel_b.data[2] + "\n");
+                FileOperations.writeToFile("position_data", mINS.Pos_b.data[0] + "," + mINS.Pos_b.data[1] + "," + mINS.Pos_b.data[2] + "\n");
+                FileOperations.writeToFile("velocity_data", mINS.Vel_b.data[0] + "," + mINS.Vel_b.data[1] + "," + mINS.Vel_b.data[2] + "\n");
 
                 flow_control(4);
 
@@ -446,6 +491,8 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
             CFlag = false;
             mKalman.initP();
 
+            positions.clear();
+
             //change mode to 0
             mode = 0;
         }
@@ -456,12 +503,18 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         private float[] iDevicePosition = {0f, 0f, 0f};
         private Paint paint;
         Context mContext;
-        private Canvas canvas;
+        private Canvas mCanvas;
 
-        private float[] mPosition;
-        public void setPosition(float[] position) {
-            mPosition = position;
-            invalidate();
+        private float[] mPositions;
+        private ArrayList<float[]> mPositionArray = new ArrayList<>();
+
+//        public void setPosition(float[] positions) {
+//            mPositions = positions;
+//            invalidate();
+//        }
+
+        public void setPositionArray(ArrayList<float[]> positionArray){
+            mPositionArray = positionArray;
         }
 
         public DevicePositionView(Context context) {
@@ -475,15 +528,21 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
+            mCanvas = canvas;
             // Set up the paint for the circle
             Paint paint = new Paint();
             paint.setColor(Color.RED);
             paint.setStyle(Paint.Style.FILL);
             canvas.save();
             // Draw the circle at the current position
-            if (mPosition != null) {
-                canvas.drawCircle(Math.abs(mPosition[0]), Math.abs(mPosition[1]), 10f, paint);
-
+            if (mPositionArray.size() > 0) {
+                for(int i = 0;i<mPositionArray.size(); i++){
+                    canvas.drawCircle(mPositionArray.get(i)[0], mPositionArray.get(i)[1], 10f, paint);
+                    if(mPositionArray.size()>1 && i<=mPositionArray.size()-2){
+                        canvas.drawLine(mPositionArray.get(i)[0],mPositionArray.get(i)[1], mPositionArray.get(i+1)[0], mPositionArray.get(i+1)[1], paint);
+                    }
+                }
+                postInvalidate();
             }
             canvas.restore();
         }

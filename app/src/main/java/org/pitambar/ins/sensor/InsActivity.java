@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.os.PersistableBundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.widget.RelativeLayout;
@@ -14,6 +15,8 @@ import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 
+import org.pitambar.ins.MySurfaceView;
+import org.pitambar.ins.MyTextureView;
 import org.pitambar.ins.R;
 
 /**
@@ -27,6 +30,8 @@ public class InsActivity extends Activity implements SensorDataListener {
     RelativeLayout mChildLayout;
 
     DevicePositionView devicePositionView;
+    MyTextureView mMyTextureView;
+    MySurfaceView mMySurfaceView;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -42,6 +47,21 @@ public class InsActivity extends Activity implements SensorDataListener {
         orientationTextView = findViewById(R.id.orientationTextView);
 
         mChildLayout = findViewById(R.id.childLayout);
+
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+
+        // on below line we are getting metrics for display using window manager.
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+
+        // on below line we are getting height
+        // and width using display metrics.
+        int height = displayMetrics.heightPixels;
+        int width = displayMetrics.widthPixels;
+
+        mMyTextureView = new MyTextureView(this, width, height);
+        mMySurfaceView = new MySurfaceView(this, width, height);
+
+        mChildLayout.addView(mMySurfaceView);
 
 //        devicePositionView = new DevicePositionView(this);
 //

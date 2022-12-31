@@ -7,21 +7,21 @@
     <TextView
         android:id="@+id/posTextView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:visibility="gone"/>
 
     <TextView
         android:id="@+id/orientationTextView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:visibility="gone"/>
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:id="@+id/childLayout"
-        android:visibility="gone"
-        android:layout_centerHorizontal="true"
+        android:background="@color/colorPrimary"
+        android:visibility="visible"
          />
-    <SurfaceView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+
 </LinearLayout>

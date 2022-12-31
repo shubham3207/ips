@@ -19,16 +19,16 @@
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
             android:label="@string/app_name"
             android:screenOrientation="portrait">
+
+
+        </activity>
+        <activity android:name=".sensor.InsActivity">
             <intent-filter>
                 <!-- Using data in MainActivity activity, make icon vanish-->
                 <!--data android:scheme="project"/-->
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
-        </activity>
-        <activity android:name=".sensor.InsActivity">
-
         </activity>
     </application>
 

@@ -44,7 +44,7 @@ public class INS {
 		}
 		
 		//Assume a fixed gravity
-		gravity.set(2,-SensorManager.GRAVITY_EARTH); //Gravity in NED (not ENU) 
+		gravity.set(2,SensorManager.GRAVITY_EARTH); //Gravity in NED (not ENU)
 	}
 	
 	//Setters and getters
