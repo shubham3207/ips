@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
 import android.graphics.SurfaceTexture;
 import android.util.DisplayMetrics;
 import android.view.MotionEvent;
@@ -21,11 +22,11 @@ public class MyTextureView extends TextureView implements TextureView.SurfaceTex
     private float mX;
     private float mY;
     private float mVelocityX;
+    private float mVelocityY;
     private Paint mPaint;
     private Surface mSurface;
     private int mWidth, mHeight;
-
-    private UpdateThread mUpdateThread;
+    Canvas canvas;
 
     public MyTextureView(Context context, int width, int height) {
         super(context);
@@ -41,56 +42,38 @@ public class MyTextureView extends TextureView implements TextureView.SurfaceTex
         mPaint.setColor(Color.RED);
 
         // Set the x-coordinate of the image's position to the center of the screen
-        mX = width/2 - mImage.getWidth() / 2;
+        mX = width / 2 - mImage.getWidth() / 2;
 
         // Set the y-coordinate of the image's position to the center of the screen
-        mY = height/2 - mImage.getHeight() / 2;
+        mY = height / 2 - mImage.getHeight() / 2;
 
         // Set the velocity of the image's movement to 0
         mVelocityX = 0;
-
+        mVelocityY = 0;
         // Set this view as the touch listener
         setOnTouchListener(this);
-
         setSurfaceTextureListener(this);
 
     }
-
 
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         // Update the velocity of the image's movement based on the touch input
         mVelocityX = event.getX() - mX;
+        mVelocityY = event.getY() - mY;
+        drawImage();
         return true;
     }
 
 
-
-    public void update() {
-        // Update the x-coordinate of the image's position based on the velocity
-        mX += mVelocityX;
-
-        // If the image has moved off the screen, wrap it around to the other side
-        if (mX > mWidth ) {
-            mX = -mImage.getWidth();
-        } else if (mX + mImage.getWidth() < 0) {
-            mX = mWidth;
-        }
-
-        if(mY>mHeight){
-            mY = -mImage.getHeight();
-        }else if(mY+mImage.getHeight() <0){
-            mY = mHeight;
-        }
-    }
-
     @Override
     public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
         mSurface = new Surface(surface);
-        mUpdateThread = new UpdateThread(this);
-        mUpdateThread.setRunning(true);
-        mUpdateThread.start();
+//        mUpdateThread = new UpdateThread(this);
+        drawImage();
+//        mUpdateThread.setRunning(true);
+//        mUpdateThread.start();
     }
 
     @Override
@@ -116,34 +99,29 @@ public class MyTextureView extends TextureView implements TextureView.SurfaceTex
 
     }
 
-    private class UpdateThread extends Thread{
+    public void drawImage(){
+        update();
+         canvas = mSurface.lockCanvas(null);
+        canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+        canvas.drawBitmap(mImage, mX, mY, mPaint);
+        mSurface.unlockCanvasAndPost(canvas);
+    }
+    public void update() {
+        // Update the x-coordinate of the image's position based on the velocity
+        mX += mVelocityX;
+        mY += mVelocityY;
 
-        private MyTextureView mView;
-        private boolean mIsRunning;
-
-        public UpdateThread(MyTextureView view){
-            mView = view;
-            mIsRunning = false;
+        // If the image has moved off the screen, wrap it around to the other side
+        if (mX > mWidth) {
+            mX = -mImage.getWidth();
+        } else if (mX + mImage.getWidth() < 0) {
+            mX = mWidth;
         }
 
-        public void setRunning(boolean isRunning) {
-            mIsRunning = isRunning;
-        }
-
-        @Override
-        public void run() {
-            while (mIsRunning){
-                mView.update();
-                Canvas canvas = mSurface.lockCanvas(null);
-                canvas.drawBitmap(mImage, mX, mY, mPaint);
-                mSurface.unlockCanvasAndPost(canvas);
-
-                try{
-                    Thread.sleep(10);
-                }catch (InterruptedException e){
-                    e.printStackTrace();
-                }
-            }
+        if (mY > mHeight) {
+            mY = -mImage.getHeight();
+        } else if (mY + mImage.getHeight() < 0) {
+            mY = mHeight;
         }
     }
 }

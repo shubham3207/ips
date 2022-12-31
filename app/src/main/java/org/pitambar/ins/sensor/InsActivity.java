@@ -61,7 +61,7 @@ public class InsActivity extends Activity implements SensorDataListener {
         mMyTextureView = new MyTextureView(this, width, height);
         mMySurfaceView = new MySurfaceView(this, width, height);
 
-        mChildLayout.addView(mMySurfaceView);
+        mChildLayout.addView(mMyTextureView);
 
 //        devicePositionView = new DevicePositionView(this);
 //
