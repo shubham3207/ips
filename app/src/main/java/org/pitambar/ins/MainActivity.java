@@ -9,9 +9,8 @@
 
 package org.pitambar.ins;
 
-import static java.security.AccessController.getContext;
-
 import android.app.Activity;
+import android.app.Fragment;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -39,6 +38,7 @@ import java.util.List;
 
 public class MainActivity extends Activity implements OnClickListener, SensorEventListener {
 
+    //    ImuSensorsListener imuSensorsListener = null;
     private final float N2S = 1000000000f;
 
     //Initial Camera Pos/Att
@@ -61,7 +61,7 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
     //2 = 6Dof
     //3 = Bias Removal
     int mode = 0;
-    int count =0;
+    int count = 0;
     boolean ZFlag = false, CFlag = false;
 
     //Most recent sensor data and its timestamp
@@ -87,11 +87,14 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
     float[] mx_a = new float[9];
 
     DevicePositionView devicePositionView;
-    MySurfaceView mCustomSurfaceView;
+    MyTextureView mCustomTexttureView;
 
     float[] deviceOrientation = new float[3];
     private Canvas mCanvas;
     private ArrayList<float[]> positions = new ArrayList<>();
+
+    float mDeviceWidth = 0.0f;
+    float mDeviceHeight = 0.0f;
 
     public MainActivity() {
         mCube = new MyCube(INIPos, INICbn);
@@ -101,13 +104,12 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
     }
 
 
-
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
+//        this.imuSensorsListener = (ImuSensorsListener) this;
         //Get a reference to sensor manager
         mSMan = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
@@ -116,8 +118,11 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         int height = displayMetrics.heightPixels;
         int width = displayMetrics.widthPixels;
 
-        INIPos[0] = (float) width/2;
-        INIPos[1] = (float) height * 0.75f;
+//        INIPos[0] = (float) width/2;
+//        INIPos[1] = (float) height * 0.75f;
+//        INIPos[2] = 0f;
+        INIPos[0] = (float) width / 2;
+        INIPos[1] = (float) height / 2;
         INIPos[2] = 0f;
 
         mINS = new INS(INIPos, INIVel, INICbn);
@@ -138,13 +143,13 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
 
         mDevicePositionView.setVisibility(View.GONE);
 
-//        RelativeLayout mSurface = new RelativeLayout(this);
-//        mSurface.setGravity(Gravity.CENTER);
-//        mSurface.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-//        mSurface.setId(92);
-//
-//        mCustomSurfaceView = new MySurfaceView(this);
-//        mSurface.addView(mCustomSurfaceView);
+        RelativeLayout mSurface = new RelativeLayout(this);
+        mSurface.setGravity(Gravity.CENTER);
+        mSurface.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        mSurface.setId(92);
+
+        mCustomTexttureView = new MyTextureView(this, width, height);
+        mSurface.addView(mCustomTexttureView);
 
 
 //        //Add button and text elements to the view
@@ -200,7 +205,7 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         ll.addView(llb2);
         this.addContentView(etv, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
         this.addContentView(mDevicePositionView, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
-//        this.addContentView(mSurface, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
+        this.addContentView(mSurface, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
         this.addContentView(ll, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
 
         mbut0.setOnClickListener(this);
@@ -373,19 +378,42 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
                 etv.setText("Pos :" + mINS.Pos_b.data[0] + "\n" + mINS.Pos_b.data[1] + "\n" + mINS.Pos_b.data[2] + "\n" +
                         "Vel :" + mINS.Vel_b.data[0] + "\n" + mINS.Vel_b.data[1] + "\n" + mINS.Vel_b.data[2]);
 
+                float[] prevPosition = {0f, 0.0f, 0f};
+                if (positions.size() > 3)
+                    prevPosition = positions.get(positions.size() - 1);
+
                 float[] devicePosition = new float[3];
 
                 devicePosition[0] = (float) mINS.Pos_b.data[0];
                 devicePosition[1] = (float) mINS.Pos_b.data[1];
                 devicePosition[2] = (float) mINS.Pos_b.data[2];
 
+                Log.d("position", devicePosition[0] + ", " + devicePosition[1]);
+
 //                devicePositionView.setPosition(devicePosition);
                 positions.add(devicePosition);
+
+
                 devicePositionView.setPositionArray(positions);
 
-                if(devicePositionView.mCanvas!=null){
+                if (devicePositionView.mCanvas != null) {
                     devicePositionView.draw(devicePositionView.mCanvas);
                 }
+
+//                mCustomTexttureView.setmX(devicePosition[0]);
+//                mCustomTexttureView.setmY(devicePosition[1]);
+
+                if(positions.size()>3){
+                    float changeInX = devicePosition[0] - prevPosition[0];
+                    float changeInY = devicePosition[1] - prevPosition[1];
+                    mCustomTexttureView.setmVelocityX(changeInX);
+                    mCustomTexttureView.setmVelocityY(changeInY);
+                    mCustomTexttureView.setmPositionArray(positions);
+                }
+
+                mCustomTexttureView.drawImage();
+
+//                imuSensorsListener.onPositionObtained(devicePosition);
 
 
                 //TODO: Draw Position updates as line in the screen flow
@@ -513,7 +541,7 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
 //            invalidate();
 //        }
 
-        public void setPositionArray(ArrayList<float[]> positionArray){
+        public void setPositionArray(ArrayList<float[]> positionArray) {
             mPositionArray = positionArray;
         }
 
@@ -536,10 +564,10 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
             canvas.save();
             // Draw the circle at the current position
             if (mPositionArray.size() > 0) {
-                for(int i = 0;i<mPositionArray.size(); i++){
+                for (int i = 0; i < mPositionArray.size(); i++) {
                     canvas.drawCircle(mPositionArray.get(i)[0], mPositionArray.get(i)[1], 10f, paint);
-                    if(mPositionArray.size()>1 && i<=mPositionArray.size()-2){
-                        canvas.drawLine(mPositionArray.get(i)[0],mPositionArray.get(i)[1], mPositionArray.get(i+1)[0], mPositionArray.get(i+1)[1], paint);
+                    if (mPositionArray.size() > 1 && i <= mPositionArray.size() - 2) {
+                        canvas.drawLine(mPositionArray.get(i)[0], mPositionArray.get(i)[1], mPositionArray.get(i + 1)[0], mPositionArray.get(i + 1)[1], paint);
                     }
                 }
                 postInvalidate();
@@ -547,5 +575,7 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
             canvas.restore();
         }
     }
+
+
 }
 

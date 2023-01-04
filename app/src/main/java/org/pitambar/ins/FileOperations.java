@@ -18,7 +18,7 @@ public class FileOperations {
             String storageState = Environment.getExternalStorageState();
             if (storageState.equals(Environment.MEDIA_MOUNTED)) {
                 String filePath = Environment.getExternalStorageDirectory().toString()+"/Documents/"+fname+".txt";
-                Log.d("filepath", filePath);
+//                Log.d("filepath", filePath);
                 File file=new File(filePath);
                 FileWriter f = new FileWriter(file, true);
                 f.write(data);
