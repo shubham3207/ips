@@ -10,11 +10,9 @@
 package org.pitambar.ins;
 
 import android.app.Activity;
-import android.app.Fragment;
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -22,9 +20,7 @@ import android.hardware.SensorManager;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Gravity;
-import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
@@ -34,11 +30,9 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class MainActivity extends Activity implements OnClickListener, SensorEventListener {
 
-    //    ImuSensorsListener imuSensorsListener = null;
     private final float N2S = 1000000000f;
 
     //Initial Camera Pos/Att
@@ -60,7 +54,7 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
     //1 = 3Dof (Gyro)
     //2 = 6Dof
     //3 = Bias Removal
-    int mode = 0;
+    int mode = 2;
     int count = 0;
     boolean ZFlag = false, CFlag = false;
 
@@ -86,19 +80,16 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
     float[] vr_b = new float[3];
     float[] mx_a = new float[9];
 
-    DevicePositionView devicePositionView;
     MyTextureView mCustomTexttureView;
 
-    float[] deviceOrientation = new float[3];
-    private Canvas mCanvas;
+    float xScaleFactor = 0f;
+    float yScaleFactor = 0f;
+
     private ArrayList<float[]> positions = new ArrayList<>();
 
-    float mDeviceWidth = 0.0f;
-    float mDeviceHeight = 0.0f;
 
     public MainActivity() {
         mCube = new MyCube(INIPos, INICbn);
-//        mINS = new INS(INIPos, INIVel, INICbn);
         mKalman = new Kalman();
 
     }
@@ -109,8 +100,6 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
-//        this.imuSensorsListener = (ImuSensorsListener) this;
-        //Get a reference to sensor manager
         mSMan = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
         DisplayMetrics displayMetrics = new DisplayMetrics();
@@ -118,39 +107,31 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         int height = displayMetrics.heightPixels;
         int width = displayMetrics.widthPixels;
 
-//        INIPos[0] = (float) width/2;
-//        INIPos[1] = (float) height * 0.75f;
-//        INIPos[2] = 0f;
-        INIPos[0] = (float) width / 2;
-        INIPos[1] = (float) height / 2;
+        Bitmap mImage = BitmapFactory.decodeResource(getResources(), R.drawable.floor_plan_new);
+        float mImageWidth = mImage.getWidth();
+        float mImageHeight =  mImage.getHeight();
+
+         xScaleFactor = mImageWidth/975;
+         yScaleFactor = mImageHeight/1250;
+        INIPos[0] = mImageWidth/2;
+        INIPos[1] = mImageHeight/2;
         INIPos[2] = 0f;
 
         mINS = new INS(INIPos, INIVel, INICbn);
-//
+
         //Set the OpenGl View
         mGLSView = new GLSurfaceView(this);
         mGLSView.setRenderer(mCube);
         setContentView(mGLSView);
         mGLSView.setVisibility(View.INVISIBLE);
-        RelativeLayout mDevicePositionView = new RelativeLayout(this);
-        mDevicePositionView.setGravity(Gravity.CENTER);
-        mDevicePositionView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-        mDevicePositionView.setId(90);
-
-        devicePositionView = new DevicePositionView(this);
-
-        mDevicePositionView.addView(devicePositionView);
-
-        mDevicePositionView.setVisibility(View.GONE);
 
         RelativeLayout mSurface = new RelativeLayout(this);
         mSurface.setGravity(Gravity.CENTER);
         mSurface.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
         mSurface.setId(92);
 
-        mCustomTexttureView = new MyTextureView(this, width, height);
+        mCustomTexttureView = new MyTextureView(this, width, height, mImage);
         mSurface.addView(mCustomTexttureView);
-
 
 //        //Add button and text elements to the view
         LinearLayout ll = new LinearLayout(this);
@@ -167,30 +148,29 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         llb2.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
         llb2.setGravity(Gravity.CENTER);
 //
-        Button mbut0 = new Button(this);
-        mbut0.setText("3Dof(A+C)");
-        mbut0.setId(0);
-        Button mbut1 = new Button(this);
-        mbut1.setText("3DoF(Gyro)");
-        mbut1.setId(1);
+//        Button mbut0 = new Button(this);
+//        mbut0.setText("3Dof(A+C)");
+//        mbut0.setId(0);
+//        Button mbut1 = new Button(this);
+//        mbut1.setText("3DoF(Gyro)");
+//        mbut1.setId(1);
         Button mbut3 = new Button(this);
-        mbut3.setText("6DoF");
+        mbut3.setText("Start");
         mbut3.setId(3);
 //
         Button mbut2 = new Button(this);
         mbut2.setText("Bias Rem.");
         mbut2.setId(2);
         Button mbut4 = new Button(this);
-        mbut4.setText("ZUPT");
+        mbut4.setText("UPDATE");
         mbut4.setId(4);
         Button mbut5 = new Button(this);
-        mbut5.setText("CUPT");
+        mbut5.setText("CURRENT");
         mbut5.setId(5);
         Button mbut6 = new Button(this);
         mbut6.setText("Reset");
         mbut6.setId(6);
-        llb1.addView(mbut0);
-        llb1.addView(mbut1);
+        mbut6.setVisibility(View.GONE);
         llb1.addView(mbut3);
         llb2.addView(mbut2);
         llb2.addView(mbut4);
@@ -199,17 +179,12 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
 //
         etv = new TextView(this);
         etv.setText("Default: Acc+Compass");
-
-        //ll.addView(etv);
         ll.addView(llb1);
         ll.addView(llb2);
         this.addContentView(etv, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
-        this.addContentView(mDevicePositionView, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
         this.addContentView(mSurface, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
         this.addContentView(ll, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
 
-        mbut0.setOnClickListener(this);
-        mbut1.setOnClickListener(this);
         mbut2.setOnClickListener(this);
         mbut3.setOnClickListener(this);
         mbut4.setOnClickListener(this);
@@ -296,7 +271,6 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
 
             //I am going to use android's built function for body vector to dcm transformation (see the development notes for the criticism of this method)
             SensorManager.getRotationMatrix(mx_a, null, dAcc, dMag);
-
             //Set the new orientation in INS and Cube classes
             mCube.set_dcm(mx_a);
             mINS.set_dcm(mx_a);
@@ -329,7 +303,6 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
                 //Reset the accumulators and time
                 mINS.accum.clear();
                 tBR = 0;
-
                 //Set the mode to 0 automatically after this routine
                 flow_control(0);
                 etv.setText("Abias :" + cBAcc[0] + "\n" + cBAcc[1] + "\n" + cBAcc[2] + "\n" +
@@ -378,50 +351,28 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
                 etv.setText("Pos :" + mINS.Pos_b.data[0] + "\n" + mINS.Pos_b.data[1] + "\n" + mINS.Pos_b.data[2] + "\n" +
                         "Vel :" + mINS.Vel_b.data[0] + "\n" + mINS.Vel_b.data[1] + "\n" + mINS.Vel_b.data[2]);
 
-                float[] prevPosition = {0f, 0.0f, 0f};
-                if (positions.size() > 3)
-                    prevPosition = positions.get(positions.size() - 1);
-
                 float[] devicePosition = new float[3];
 
                 devicePosition[0] = (float) mINS.Pos_b.data[0];
                 devicePosition[1] = (float) mINS.Pos_b.data[1];
                 devicePosition[2] = (float) mINS.Pos_b.data[2];
 
-                Log.d("position", devicePosition[0] + ", " + devicePosition[1]);
-
-//                devicePositionView.setPosition(devicePosition);
-                positions.add(devicePosition);
-
-
-                devicePositionView.setPositionArray(positions);
-
-                if (devicePositionView.mCanvas != null) {
-                    devicePositionView.draw(devicePositionView.mCanvas);
-                }
-
-//                mCustomTexttureView.setmX(devicePosition[0]);
-//                mCustomTexttureView.setmY(devicePosition[1]);
-
-                if(positions.size()>3){
-                    float changeInX = devicePosition[0] - prevPosition[0];
-                    float changeInY = devicePosition[1] - prevPosition[1];
-                    mCustomTexttureView.setmVelocityX(changeInX);
-                    mCustomTexttureView.setmVelocityY(changeInY);
+//                if(Math.abs(mINS.Vel_b.data[0]) <1 && Math.abs(mINS.Vel_b.data[1]) < 1 && Math.abs(mINS.Vel_b.data[2])<1){
+                    positions.add(devicePosition);
+                    if (positions.size() > 3) {
+                        float changeInX = devicePosition[0] - positions.get(positions.size() - 2)[0];
+                        float changeInY = devicePosition[1] - positions.get(positions.size() - 2)[1];
+                        mCustomTexttureView.setmVelocityX(changeInX);
+                        mCustomTexttureView.setmVelocityY(changeInY);
+                    } else {
+                        mCustomTexttureView.setmVelocityX(0f);
+                        mCustomTexttureView.setmVelocityY(0f);
+                    }
                     mCustomTexttureView.setmPositionArray(positions);
-                }
+                    mCustomTexttureView.drawImage();
+//                }
 
-                mCustomTexttureView.drawImage();
-
-//                imuSensorsListener.onPositionObtained(devicePosition);
-
-
-                //TODO: Draw Position updates as line in the screen flow
-
-                FileOperations.writeToFile("position_data", mINS.Pos_b.data[0] + "," + mINS.Pos_b.data[1] + "," + mINS.Pos_b.data[2] + "\n");
-                FileOperations.writeToFile("velocity_data", mINS.Vel_b.data[0] + "," + mINS.Vel_b.data[1] + "," + mINS.Vel_b.data[2] + "\n");
-
-                flow_control(4);
+//                flow_control(4);
 
                 //Check if there is an update request
                 if (ZFlag) { //Process Zupt request
@@ -443,15 +394,12 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
     private void flow_control(int cmd) {
         if (cmd == 0) {
             mode = 0;
-
             //Reset the pos and velocity (attitude will be set at each update)
             mINS.set_pos(INIPos);
             mINS.set_vel(INIVel);
-
             mCube.set_pos(mINS.get_pos());
         } else if (cmd == 1) {
             mode = 1;
-
             //Reset the pos and velocity (gyro data updates the previous attitude)
             mINS.set_pos(INIPos);
             mINS.set_vel(INIVel);
@@ -526,56 +474,54 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         }
     }
 
-    private class DevicePositionView extends View {
-        private float[] iDeviceOrientation = {0f, 0f, 0f};
-        private float[] iDevicePosition = {0f, 0f, 0f};
-        private Paint paint;
-        Context mContext;
-        private Canvas mCanvas;
-
-        private float[] mPositions;
-        private ArrayList<float[]> mPositionArray = new ArrayList<>();
-
-//        public void setPosition(float[] positions) {
-//            mPositions = positions;
-//            invalidate();
+//    private class DevicePositionView extends View {
+//        private float[] iDeviceOrientation = {0f, 0f, 0f};
+//        private float[] iDevicePosition = {0f, 0f, 0f};
+//        private Paint paint;
+//        Context mContext;
+//        private Canvas mCanvas;
+//
+//        private float[] mPositions;
+//        private ArrayList<float[]> mPositionArray = new ArrayList<>();
+//
+////        public void setPosition(float[] positions) {
+////            mPositions = positions;
+////            invalidate();
+////        }
+//
+//        public void setPositionArray(ArrayList<float[]> positionArray) {
+//            mPositionArray = positionArray;
 //        }
-
-        public void setPositionArray(ArrayList<float[]> positionArray) {
-            mPositionArray = positionArray;
-        }
-
-        public DevicePositionView(Context context) {
-            super(context);
-            mContext = context;
-            paint = new Paint();
-            paint.setColor(getResources().getColor(R.color.colorPrimary));
-            paint.setStyle(Paint.Style.FILL);
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            mCanvas = canvas;
-            // Set up the paint for the circle
-            Paint paint = new Paint();
-            paint.setColor(Color.RED);
-            paint.setStyle(Paint.Style.FILL);
-            canvas.save();
-            // Draw the circle at the current position
-            if (mPositionArray.size() > 0) {
-                for (int i = 0; i < mPositionArray.size(); i++) {
-                    canvas.drawCircle(mPositionArray.get(i)[0], mPositionArray.get(i)[1], 10f, paint);
-                    if (mPositionArray.size() > 1 && i <= mPositionArray.size() - 2) {
-                        canvas.drawLine(mPositionArray.get(i)[0], mPositionArray.get(i)[1], mPositionArray.get(i + 1)[0], mPositionArray.get(i + 1)[1], paint);
-                    }
-                }
-                postInvalidate();
-            }
-            canvas.restore();
-        }
-    }
-
-
+//
+//        public DevicePositionView(Context context) {
+//            super(context);
+//            mContext = context;
+//            paint = new Paint();
+//            paint.setColor(getResources().getColor(R.color.colorPrimary));
+//            paint.setStyle(Paint.Style.FILL);
+//        }
+//
+//        @Override
+//        protected void onDraw(Canvas canvas) {
+//            super.onDraw(canvas);
+//            mCanvas = canvas;
+//            // Set up the paint for the circle
+//            Paint paint = new Paint();
+//            paint.setColor(Color.RED);
+//            paint.setStyle(Paint.Style.FILL);
+//            canvas.save();
+//            // Draw the circle at the current position
+//            if (mPositionArray.size() > 0) {
+//                for (int i = 0; i < mPositionArray.size(); i++) {
+//                    canvas.drawCircle(mPositionArray.get(i)[0], mPositionArray.get(i)[1], 10f, paint);
+//                    if (mPositionArray.size() > 1 && i <= mPositionArray.size() - 2) {
+//                        canvas.drawLine(mPositionArray.get(i)[0], mPositionArray.get(i)[1], mPositionArray.get(i + 1)[0], mPositionArray.get(i + 1)[1], paint);
+//                    }
+//                }
+//                postInvalidate();
+//            }
+//            canvas.restore();
+//        }
+//    }
 }
 
