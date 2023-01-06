@@ -13,6 +13,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -28,6 +29,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
@@ -54,7 +56,7 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
     //1 = 3Dof (Gyro)
     //2 = 6Dof
     //3 = Bias Removal
-    int mode = 2;
+    int mode = -1;
     int count = 0;
     boolean ZFlag = false, CFlag = false;
 
@@ -147,6 +149,12 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         llb2.setOrientation(LinearLayout.HORIZONTAL);
         llb2.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
         llb2.setGravity(Gravity.CENTER);
+
+        LinearLayout llb3 = new LinearLayout(this);
+        llb3.setOrientation(LinearLayout.VERTICAL);
+        llb3.setBackgroundColor(Color.WHITE);
+        llb3.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+        llb3.setGravity(Gravity.CENTER);
 //
 //        Button mbut0 = new Button(this);
 //        mbut0.setText("3Dof(A+C)");
@@ -178,10 +186,13 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         llb2.addView(mbut6);
 //
         etv = new TextView(this);
-        etv.setText("Default: Acc+Compass");
+        etv.setPadding(28, 14, 28, 14);
+        etv.setText("Initial");
+        llb3.addView(etv);
         ll.addView(llb1);
         ll.addView(llb2);
-        this.addContentView(etv, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
+        ll.addView(llb3);
+//        this.addContentView(etv, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
         this.addContentView(mSurface, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
         this.addContentView(ll, new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
 
@@ -210,7 +221,7 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
         if (sGyro != null)
             mSMan.registerListener(this, sGyro, rate);
         else
-            etv.setText("## You don't have a gyro ##");
+            etv.setText("Not Started Yet");
     }
 
     @Override
@@ -348,14 +359,16 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
                 tProp = etime + PERPROP;
 
                 //Debug screen
-                etv.setText("Pos :" + mINS.Pos_b.data[0] + "\n" + mINS.Pos_b.data[1] + "\n" + mINS.Pos_b.data[2] + "\n" +
-                        "Vel :" + mINS.Vel_b.data[0] + "\n" + mINS.Vel_b.data[1] + "\n" + mINS.Vel_b.data[2]);
+                etv.setText("Pos :" + mINS.Pos_b.data[0] + ", " + mINS.Pos_b.data[1] + ", " + mINS.Pos_b.data[2] + "\n" +
+                        "Vel :" + mINS.Vel_b.data[0] + ", " + mINS.Vel_b.data[1] + ", " + mINS.Vel_b.data[2]);
 
                 float[] devicePosition = new float[3];
 
                 devicePosition[0] = (float) mINS.Pos_b.data[0];
                 devicePosition[1] = (float) mINS.Pos_b.data[1];
                 devicePosition[2] = (float) mINS.Pos_b.data[2];
+
+//                Toast.makeText(MainActivity.this, "Position: "+devicePosition[0]+", "+devicePosition[1],Toast.LENGTH_SHORT);
 
 //                if(Math.abs(mINS.Vel_b.data[0]) <1 && Math.abs(mINS.Vel_b.data[1]) < 1 && Math.abs(mINS.Vel_b.data[2])<1){
                     positions.add(devicePosition);
@@ -372,7 +385,7 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
                     mCustomTexttureView.drawImage();
 //                }
 
-//                flow_control(4);
+                flow_control(4);
 
                 //Check if there is an update request
                 if (ZFlag) { //Process Zupt request
@@ -441,12 +454,14 @@ public class MainActivity extends Activity implements OnClickListener, SensorEve
             if (mode == 3)
                 ZFlag = true;
             else
-                etv.setText("Zupt can only be applied in 6DoF mode");
+//                Toast.makeText(this, "INS update not Started yet.", Toast.LENGTH_SHORT);
+                etv.setText("INS update not Started yet.");
         } else if (cmd == 5) {    //Cupt for the initial Position
             if (mode == 3)
                 CFlag = true;
             else
-                etv.setText("Zupt can only be applied in 6DoF mode");
+//                Toast.makeText(this, "INS update not Started yet.", Toast.LENGTH_SHORT);
+                etv.setText("INS update not Started yet.");
         } else if (cmd == 6) {    //Reset the states
             //Reset the INS
             mINS.set_pos(INIPos);

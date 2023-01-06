@@ -137,7 +137,7 @@ public class MyTextureView extends TextureView implements TextureView.SurfaceTex
         canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
         Bitmap bit = drawCircle(mImage);
         canvas.drawBitmap(bit, mX, mY, mPaint);
-        canvas.drawCircle(mWidth / 2, mHeight / 2, 20f, mPaint);
+        canvas.drawCircle(mWidth / 2, mHeight / 2, 10f, mPaint);
         mSurface.unlockCanvasAndPost(canvas);
     }
 
@@ -153,7 +153,7 @@ public class MyTextureView extends TextureView implements TextureView.SurfaceTex
             for (int i = 1; i < mPositionArray.size(); i++) {
                 float tempX = mPositionArray.get(i)[0];
                 float tempY = mPositionArray.get(i)[1];
-                canvas.drawCircle(tempX,tempY, 20f, paint);
+                canvas.drawCircle(tempX,tempY, 5f, paint);
                 if (mPositionArray.size() > 1 && i <= mPositionArray.size() - 2) {
                     canvas.drawLine(mPositionArray.get(i)[0],
                             mPositionArray.get(i)[1]

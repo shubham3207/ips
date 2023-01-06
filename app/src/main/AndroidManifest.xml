@@ -28,12 +28,12 @@
 
         </activity>
         <activity android:name=".sensor.InsActivity">
-            <intent-filter>
-                <!-- Using data in MainActivity activity, make icon vanish-->
-                <!--data android:scheme="project"/-->
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+<!--            <intent-filter>-->
+<!--                &lt;!&ndash; Using data in MainActivity activity, make icon vanish&ndash;&gt;-->
+<!--                &lt;!&ndash;data android:scheme="project"/&ndash;&gt;-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--            </intent-filter>-->
         </activity>
     </application>
 
